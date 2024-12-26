@@ -12,54 +12,130 @@ import argparse
 import os
 import pwd
 
-# Get user information
 
-username = pwd.getpwuid(os.getuid())[0]
+def validate(args: argparse.Namespace) -> argparse.Namespace:
+    """
+    Checks that argument values are proper and ready to be used by the rest of the script.
+    """
 
-# Instantiate parser
+    # Check that `definition` is correct
 
-parser_description = 'Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.'
-parser_epilog = 'v0.1, developed for use at CHTC'
+    # Check that `name` is correct
 
-parser = argparse.ArgumentParser(description=parser_description,
+    if args.name is None:
+        args.name = f"{args.definition[:-4]}.sif"
+
+    return args
+
+
+def generate_files(args: argparse.Namespace) -> tuple[str, str]:
+    """
+    Generates the files needed in order to submit the build job.
+    """
+
+    submit_file = 'apptainer-build.sub'
+    executable_file = 'apptainer-build.sh'
+    
+    return submit_file, executable_file
+
+
+def generate_verbose_text(submit_file: str, executable_file: str, args: argparse.Namespace) -> str:
+    """
+    Generates text with debugging information.
+    """
+
+    verbose_text = f"""
+    You provided the definition file
+        {args.definition}
+    This script generated the files
+        {submit_file}
+        {executable_file}
+    The build job will create a .sif file saved to
+        {args.path}/{args.name}"""
+    return verbose_text
+
+
+def interactive_submit(submit_file: str, executable_file: str, args: argparse.Namespace) -> None:
+    print(f"\nSubmitting interactive job using '{submit_file}'.\n")
+
+
+def regular_submit(submit_file: str, executable_file: str, args: argparse.Namespace) -> None:
+    print(f"\nSubmitting regular job using '{submit_file}'.\n")
+
+
+def main(args: argparse.Namespace) -> None:
+    """
+    Processes arguments, generates files, and submits Apptainer build
+    """
+
+    # Check that argument values are valid, do cleanup
+    
+    args = validate(args)
+
+    # Create necessary files
+
+    submit_file, executable_file = generate_files(args)
+
+    # Verbose text for troubleshooting
+
+    if args.verbose == True:
+        verbose_text = generate_verbose_text(submit_file, executable_file, args)
+        print(verbose_text)
+
+    # Submit Apptainer build job
+
+    if args.manual_submit == True:
+        try:
+            print(f"\nFiles generated for manual submission: '{submit_file}' and '{executable_file}'.\n")
+        except Exception as e:
+            print(f"Unknown exception occurred when reporting generated file names: {e}")
+    elif args.interactive_build == True:
+        try:
+            interactive_submit(submit_file, executable_file, args)
+        except Exception as e:
+            print(f"Unknown exception occurred when attempting interactive job submission: {e}")
+    else:
+        try:
+            regular_submit(submit_file, executable_file, args)
+        except Exception as e:
+            print(f"Unknown exception occurred when attempting regular job submission: {e}")
+
+
+if __name__ == "__main__":
+    # Get user information
+    username = pwd.getpwuid(os.getuid())[0]
+
+    # Instantiate parser
+    parser_description = 'Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.'
+    parser_epilog = 'v0.1, developed for use at CHTC'
+
+    parser = argparse.ArgumentParser(description=parser_description,
                                  epilog=parser_epilog,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-# Add available options
+    # Add available options
 
-parser.add_argument('-d', '--definition', 
-                    required=True, type=str, metavar='<name>.def',
-                    help='Name of Apptainer definition .def file to convert to Apptainer image .sif file.')
+    parser.add_argument('-d', '--definition', 
+                        required=True, type=str, metavar='<name>.def',
+                        help='Name of Apptainer definition .def file to convert to Apptainer image .sif file.')
 
-parser.add_argument('-n', '--name', 
-                    required=False, type=str, metavar='<name>.sif',
-                    help='Desired name of the created Apptainer image .sif file.')
-parser.add_argument('-p', '--path',
-                    required=False, type=str, metavar='<path>', default=f"/staging/{username}",
-                    help='Defines a transfer_output_remap that transfers the <name>.sif file to the provided destination.')
-parser.add_argument('-i', '--interactive-build', action='store_true',
-                    help='Specifies an "interactive" job submission. Once started, user will need to manually execute the build script.')
-parser.add_argument('-m', '--manual-submit', action='store_true',
-                    help='Only generates the necessary files. User will need to manually submit the job.')
+    parser.add_argument('-n', '--name', 
+                        required=False, type=str, metavar='<name>.sif',
+                        help='Desired name of the created Apptainer image .sif file.')
+    parser.add_argument('-p', '--path',
+                        required=False, type=str, metavar='<path>', default=f"/staging/{username}",
+                        help='Defines a transfer_output_remap that transfers the <name>.sif file to the provided destination.')
+    parser.add_argument('-i', '--interactive-build', action='store_true',
+                        help='Specifies an "interactive" job submission. Once started, user will need to manually execute the build script.')
+    parser.add_argument('-m', '--manual-submit', action='store_true',
+                        help='Only generates the necessary files. User will need to manually submit the job.')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='Print additional information useful for testing and debugging.')
 
-# Read and process arguments
+    # Parse arguments
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-# Check that argument values are valid
+    # Execute
 
-definition_file = args.definition
-
-if args.name is None:
-    image_file = f"{definition_file[:-4]}.sif"
-else:
-    image_file = args.name
-
-image_file_destination = args.path
-
-# Create necessary files
-
-# Submit Apptainer build job
-
-print(f"This script will submit a job to automatically build a container image using '{definition_file}',"
-      f"and save it to '{image_file_destination}/{image_file}.")
+    main(args)
