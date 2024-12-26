@@ -12,9 +12,19 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.')
 
+# Add available options
+
 parser.add_argument('-d', '--definition', required=True, type=str, metavar='<name>.def',
-                    help='Apptainer definition .def file to convert to Apptainer image .sif file')
+                    help='Name of Apptainer definition .def file to convert to Apptainer image .sif file')
+
+# Read and process arguments
 
 args = parser.parse_args()
+
+# Check that argument values are valid
+
+# Create necessary files
+
+# Submit Apptainer build job
 
 print(f"This script will submit a job to automatically build a container image using '{args.definition}'.")
