@@ -9,13 +9,38 @@
 ##############
 
 import argparse
+import os
+import pwd
 
-parser = argparse.ArgumentParser(description='Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.')
+# Get user information
+
+username = pwd.getpwuid(os.getuid())[0]
+
+# Instantiate parser
+
+parser_description = 'Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.'
+parser_epilog = 'v0.1, developed for use at CHTC'
+
+parser = argparse.ArgumentParser(description=parser_description,
+                                 epilog=parser_epilog,
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 # Add available options
 
-parser.add_argument('-d', '--definition', required=True, type=str, metavar='<name>.def',
-                    help='Name of Apptainer definition .def file to convert to Apptainer image .sif file')
+parser.add_argument('-d', '--definition', 
+                    required=True, type=str, metavar='<name>.def',
+                    help='Name of Apptainer definition .def file to convert to Apptainer image .sif file.')
+
+parser.add_argument('-n', '--name', 
+                    required=False, type=str, metavar='<name>.sif',
+                    help='Desired name of the created Apptainer image .sif file.')
+parser.add_argument('-p', '--path',
+                    required=False, type=str, metavar='<path>', default=f"/staging/{username}",
+                    help='Defines a transfer_output_remap that transfers the <name>.sif file to the provided destination.')
+parser.add_argument('-i', '--interactive-build', action='store_true',
+                    help='Specifies an "interactive" job submission. Once started, user will need to manually execute the build script.')
+parser.add_argument('-m', '--manual-submit', action='store_true',
+                    help='Only generates the necessary files. User will need to manually submit the job.')
 
 # Read and process arguments
 
@@ -23,8 +48,18 @@ args = parser.parse_args()
 
 # Check that argument values are valid
 
+definition_file = args.definition
+
+if args.name is None:
+    image_file = f"{definition_file[:-4]}.sif"
+else:
+    image_file = args.name
+
+image_file_destination = args.path
+
 # Create necessary files
 
 # Submit Apptainer build job
 
-print(f"This script will submit a job to automatically build a container image using '{args.definition}'.")
+print(f"This script will submit a job to automatically build a container image using '{definition_file}',"
+      f"and save it to '{image_file_destination}/{image_file}.")
