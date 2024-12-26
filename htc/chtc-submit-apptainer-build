@@ -11,6 +11,13 @@
 import argparse
 import os
 import pwd
+import textwrap
+
+VERSION: str = '0.1'
+
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
+    # This should combine the functionality of the two built-in formatter classes.
+    pass
 
 
 def validate(args: argparse.Namespace) -> argparse.Namespace:
@@ -22,7 +29,7 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     # Check that `name` is correct
 
-    if args.name is None:
+    if (args.name is None) or (args.name == '<name>.sif'):
         args.name = f"{args.definition[:-4]}.sif"
 
     return args
@@ -44,14 +51,20 @@ def generate_verbose_text(submit_file: str, executable_file: str, args: argparse
     Generates text with debugging information.
     """
 
-    verbose_text = f"""
-    You provided the definition file
-        {args.definition}
-    This script generated the files
-        {submit_file}
-        {executable_file}
-    The build job will create a .sif file saved to
-        {args.path}/{args.name}"""
+    text_list: list[str] = []
+
+    text_list.append(f"\n    You provided the definition file:\n        {args.definition}")
+    
+    if args.files is not None:
+        files_list = '\n        '.join(args.files)
+        text_list.append(f"    You also specified these additional files to transfer:\n        {files_list}")
+    
+    text_list.append(f"    This script generated the files:\n        {submit_file}\n        {executable_file}")
+
+    text_list.append(f"    The build job will create a .sif file at:\n        {args.path}/{args.name}")
+
+    verbose_text = '\n'.join(text_list)
+
     return verbose_text
 
 
@@ -86,7 +99,7 @@ def main(args: argparse.Namespace) -> None:
 
     if args.manual_submit == True:
         try:
-            print(f"\nFiles generated for manual submission: '{submit_file}' and '{executable_file}'.\n")
+            print(f"\nExiting without submitting a job. User needs to submit a job using '{submit_file}'.\n")
         except Exception as e:
             print(f"Unknown exception occurred when reporting generated file names: {e}")
     elif args.interactive_build == True:
@@ -106,31 +119,59 @@ if __name__ == "__main__":
     username = pwd.getpwuid(os.getuid())[0]
 
     # Instantiate parser
-    parser_description = 'Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.'
-    parser_epilog = 'v0.1, developed for use at CHTC'
+    parser_description = textwrap.dedent(f'''\
+        Use this script to submit a job that automatically builds an Apptainer container image using the 
+        provided definition file.
+        ''')
+    parser_epilog = textwrap.dedent(f'''\
+        This script can be used to submit an HTCondor job for building an Apptainer container on CHTC's High 
+        Throughput Comuting (HTC) cluster. User provides the necessary Apptainer definition (.def) file and 
+        the script will create and submit a job that builds the corresponding Apptainer container image (.sif) 
+        file and places the .sif file in the user's /staging directory upon completion. For more information,
+        see <link to CHTC webpage>.
+        
+        v{VERSION}
+        ''')
 
     parser = argparse.ArgumentParser(description=parser_description,
                                  epilog=parser_epilog,
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                 formatter_class=CustomFormatter)
 
-    # Add available options
+    # General "optional" arguments
 
-    parser.add_argument('-d', '--definition', 
+    parser.add_argument('--version', action='version', version=VERSION)
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='Print additional information useful for testing and debugging.')
+
+    # Required arguments
+
+    required = parser.add_argument_group('required')
+
+    required.add_argument('-d', '--definition', 
                         required=True, type=str, metavar='<name>.def',
                         help='Name of Apptainer definition .def file to convert to Apptainer image .sif file.')
 
-    parser.add_argument('-n', '--name', 
-                        required=False, type=str, metavar='<name>.sif',
+    # Additional arguments
+
+    additional = parser.add_argument_group('additional')
+
+    additional.add_argument('-n', '--name', 
+                        required=False, type=str, metavar='<name>.sif', default='<name>.sif',
                         help='Desired name of the created Apptainer image .sif file.')
-    parser.add_argument('-p', '--path',
+    additional.add_argument('-p', '--path',
                         required=False, type=str, metavar='<path>', default=f"/staging/{username}",
                         help='Defines a transfer_output_remap that transfers the <name>.sif file to the provided destination.')
-    parser.add_argument('-i', '--interactive-build', action='store_true',
+    additional.add_argument('-f', '--files', type=str, metavar=('FILE1', 'FILE2'), nargs='*',
+                        help='List additional files that will need to be transferred alongside the .def file.')
+
+    # Mutually exclusive additional arguments
+
+    mutually_exclusive = additional.add_mutually_exclusive_group()
+
+    mutually_exclusive.add_argument('-i', '--interactive-build', action='store_true',
                         help='Specifies an "interactive" job submission. Once started, user will need to manually execute the build script.')
-    parser.add_argument('-m', '--manual-submit', action='store_true',
-                        help='Only generates the necessary files. User will need to manually submit the job.')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='Print additional information useful for testing and debugging.')
+    mutually_exclusive.add_argument('-m', '--manual-submit', action='store_true',
+                        help='Generates the necessary files and exits. User will need to manually submit the job using the generated files.')
 
     # Parse arguments
 
