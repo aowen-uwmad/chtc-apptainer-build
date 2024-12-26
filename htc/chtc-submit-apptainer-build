@@ -34,8 +34,8 @@ def generate_files(args: argparse.Namespace) -> tuple[str, str]:
     Generates the files needed in order to submit the build job.
     """
 
-    submit_file = 'apptainer-build.sub'
-    executable_file = 'apptainer-build.sh'
+    submit_file: str = 'apptainer-build.sub'
+    executable_file: str = 'apptainer-build.sh'
     
     return submit_file, executable_file
 
@@ -50,7 +50,7 @@ def generate_verbose_text(submit_file: str, executable_file: str, args: argparse
     text_list.append(f"\n    You provided the definition file:\n        {args.definition}")
     
     if args.files is not None:
-        files_list = '\n        '.join(args.files)
+        files_list: str = '\n        '.join(args.files)
         text_list.append(f"    You also specified these additional files to transfer:\n        {files_list}")
     
     text_list.append(f"    This script generated the files:\n        {submit_file}\n        {executable_file}")
@@ -110,14 +110,14 @@ def main(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     # Get user information
-    username = pwd.getpwuid(os.getuid())[0]
+    username: str = str(pwd.getpwuid(os.getuid())[0])
 
     # Instantiate parser
-    parser_description = f'''
+    parser_description: str = f'''
         Use this script to submit a job that automatically builds an Apptainer container image using the 
         provided definition file.
         '''
-    parser_epilog = f'''
+    parser_epilog: str = f'''
         Version {VERSION} -- 
         This script can be used to submit an HTCondor job for building an Apptainer container on CHTC's High 
         Throughput Computing (HTC) cluster. User provides the necessary Apptainer definition (.def) file and 
