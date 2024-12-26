@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    cat << EOF
+
+	Usage:
+		submit-apptainer-build container.def args
+
+	Given a container definition file (container.def), submit a
+	Slurm job that runs 
+		apptainer build container.sif container.def
+
+	The Slurm job is named 'apptainer-build_\${container}' and
+	generates 'build_\${container}_Job#.{out, err}'. It requests
+	8 cores and 4 GB RAM/core, with a 4 hour time limit.
+
+	If additional arguments are provided, they will be passed to 
+	the build command verbatim:
+		apptainer build args container.sif container.def
+
+EOF
+    exit 1
+fi
+
+container_name="$1"
+if [[ ! -f "${container_name}.def" ]]; then
+    if [[ -f "${container_name::-4}.def" ]]; then
+        container_name="${container_name::-4}"
+    elif [[ -f "${container_name::-1}.def" ]]; then
+        # container_name="${container_name::-1}.def"
+		container_name="${container_name::-1}"
+    else
+        echo "Error: Definition file named ${container_name} does not exist."
+        exit 1
+    fi
+fi
+
+if [[ -f "${container_name}.sif" ]]; then 
+	echo "Error: Container named ${container_name}.sif already exists."
+	echo "       (Re)move the file and try again."
+	exit 1
+fi
+
+sbatch -J "build_${container_name}" \
+	-o "build_${container_name}_%j.out" \
+	-e "build_${container_name}_%j.err" \
+	/home/aowen4/apptainer/submit-scripts/build.submit "${container_name}" "${@:2}"
+

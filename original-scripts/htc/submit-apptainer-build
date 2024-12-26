@@ -1,0 +1,16 @@
+#!/bin/bash
+
+container_name="$1"
+if [[ ! -f "${container_name}.def" ]]; then
+    if [[ -f "${container_name::-4}.def" ]]; then
+        container_name="${container_name::-4}"
+    elif [[ -f "${container_name::-1}.def" ]]; then
+        container_name="${container_name::-1}"
+    else
+        echo "Error: Definition file named ${container_name} does not exist."
+        exit 1
+    fi
+fi
+
+condor_submit /home/aowen4/bin/apptainer_build.sub container_name=${container_name}
+

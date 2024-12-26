@@ -1,0 +1,18 @@
+#!/bin/bash
+
+staging_path="/staging/aowen4/apptainer"
+
+container_name="$1"
+if [[ ! -f "${staging_path}/${container_name}.sif" ]]; then
+    if [[ -f "${staging_path}/${container_name::-4}.sif" ]]; then
+        container_name="${container_name::-4}"
+    elif [[ -f "${staging_path}/${container_name::-1}.sif" ]]; then
+        container_name="${container_name::-1}"
+    else
+        echo "Error: Container image file named ${staging_path}/${container_name} does not exist."
+        exit 1
+    fi
+fi
+
+condor_submit -i /home/aowen4/bin/apptainer_test.sub container_name=${container_name}
+

@@ -1,0 +1,49 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    cat << EOF
+
+	Usage:
+		submit-apptainer-mpi-test container.sif
+
+	Given a container image file (container.sif), submit a
+	Slurm job that compiles a "Hello World" MPI script and
+	executes it across 8 threads.
+
+	The Slurm job is named 'apptainer-mpi-test_\${container}' and
+	generates 'mpi-test_\${container}_Job#.{out, err}'. It requests
+	8 cores and 4 GB RAM/core, with a 10 minute time limit.
+
+	If the test runs successfully, the .err file should be empty, 
+	and the .out file should contain:
+		Hello, I am rank 0/8
+		Hello, I am rank 1/8
+		Hello, I am rank 2/8
+		Hello, I am rank 3/8
+		Hello, I am rank 4/8
+		Hello, I am rank 5/8
+		Hello, I am rank 6/8
+		Hello, I am rank 7/8
+
+EOF
+    exit 1
+fi
+
+container_name="$1"
+if [[ ! -f "${container_name}.sif" ]]; then
+    if [[ -f "${container_name::-4}.sif" ]]; then
+        container_name="${container_name::-4}"
+    elif [[ -f "${container_name::-1}.sif" ]]; then
+        # container_name="${container_name::-1}.sif"
+        container_name="${container_name::-1}"
+    else
+        echo "Error: Container image file named ${container_name} does not exist."
+        exit 1
+    fi
+fi
+
+sbatch -J "mpi-test_${container_name}" \
+	-o "mpi-test_${container_name}_%j.out" \
+	-e "mpi-test_${container_name}_%j.err" \
+	/home/aowen4/apptainer/submit-scripts/mpi-test.submit "${container_name}"
+

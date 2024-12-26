@@ -1,0 +1,24 @@
+job_name = build_$(container_name)
+
+universe = vanilla
+log = $(job_name).log
+batch_name = $(job_name)
+
+executable = /home/aowen4/bin/apptainer_build.sh
+transfer_executable = True
+arguments = $(container_name)
+transfer_input_files = /home/aowen4/bin/apptainer_build.sh, $(container_name).def
+
+output = $(job_name).out
+error = $(job_name).err
+stream_output = True
+stream_error = True
+
++IsBuildJob = True
+
+request_cpus = 8
+request_memory = 16GB
+request_disk = 30GB
+
+queue
+
