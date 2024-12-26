@@ -4,7 +4,17 @@
 
 # Written for Python 3.9
 
+##############
+# HTC Submit #
+##############
+
 import argparse
 
-parser = argparse.buildArguments()
+parser = argparse.ArgumentParser(description='Use this script to submit a job that automatically builds an Apptainer container image using the provided definition file.')
 
+parser.add_argument('-d', '--definition', required=True, type=str, metavar='<name>.def',
+                    help='Apptainer definition .def file to convert to Apptainer image .sif file')
+
+args = parser.parse_args()
+
+print(f"This script will submit a job to automatically build a container image using '{args.definition}'.")
