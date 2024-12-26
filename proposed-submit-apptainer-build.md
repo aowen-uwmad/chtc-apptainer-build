@@ -23,10 +23,11 @@ Options:
 	[additional_input_1 ...]	Additional files that must be transferred along with the .def file for the build.
 
 	-n, --name				Name of created Apptainer image .sif file
-								(default=<definition_file>.sif
+								(default=<definition_file>.sif)
 	-p, --path				If provided, will define a transfer_output_remap of the 
 							.sif file to the provided destination
-								(default=/staging/$USER)
+								(HTC default=/staging/$USER)
+                                (HPC default=/home/$USER)
 	-i, --interactive-build	Submit job interactively; once started, execute "run_apptainer_build.sh" script
 								(default=False)
 	-m, --manual-submit		Generate the necessary files to manually submit the build job.
