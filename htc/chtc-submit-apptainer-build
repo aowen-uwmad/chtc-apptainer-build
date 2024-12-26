@@ -15,11 +15,6 @@ import textwrap
 
 VERSION: str = '0.1'
 
-class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
-    # This should combine the functionality of the two built-in formatter classes.
-    pass
-
-
 def validate(args: argparse.Namespace) -> argparse.Namespace:
     """
     Checks that argument values are proper and ready to be used by the rest of the script.
@@ -119,29 +114,29 @@ if __name__ == "__main__":
     username = pwd.getpwuid(os.getuid())[0]
 
     # Instantiate parser
-    parser_description = textwrap.dedent(f'''\
+    parser_description = f'''
         Use this script to submit a job that automatically builds an Apptainer container image using the 
         provided definition file.
-        ''')
-    parser_epilog = textwrap.dedent(f'''\
+        '''
+    parser_epilog = f'''
         This script can be used to submit an HTCondor job for building an Apptainer container on CHTC's High 
-        Throughput Comuting (HTC) cluster. User provides the necessary Apptainer definition (.def) file and 
+        Throughput Computing (HTC) cluster. User provides the necessary Apptainer definition (.def) file and 
         the script will create and submit a job that builds the corresponding Apptainer container image (.sif) 
         file and places the .sif file in the user's /staging directory upon completion. For more information,
         see <link to CHTC webpage>.
         
         v{VERSION}
-        ''')
+        '''
 
     parser = argparse.ArgumentParser(description=parser_description,
                                  epilog=parser_epilog,
-                                 formatter_class=CustomFormatter)
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     # General "optional" arguments
 
-    parser.add_argument('--version', action='version', version=VERSION)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Print additional information useful for testing and debugging.')
+    parser.add_argument('--version', action='version', version=VERSION)
 
     # Required arguments
 
