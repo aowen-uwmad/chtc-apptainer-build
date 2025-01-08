@@ -91,21 +91,21 @@ def main(args: argparse.Namespace) -> None:
 
     # Submit Apptainer build job
 
-    if args.manual_submit == True:
-        try:
-            print(f"\nExiting without submitting a job. User needs to submit a job using '{submit_file}'.\n")
-        except Exception as e:
-            print(f"Unknown exception occurred when reporting generated file names: {e}")
-    elif args.interactive_build == True:
+    if args.interactive_submit == True:
         try:
             interactive_submit(submit_file, executable_file, args)
         except Exception as e:
             print(f"Unknown exception occurred when attempting interactive job submission: {e}")
-    else:
+    elif args.submit == True:
         try:
             regular_submit(submit_file, executable_file, args)
         except Exception as e:
             print(f"Unknown exception occurred when attempting regular job submission: {e}")
+    else:
+        try:
+            print(f"\nBuild files generated! User needs to submit a job using `condor_submit {submit_file}`.\n")
+        except Exception as e:
+            print(f"Unknown exception occurred when reporting generated file names: {e}")
 
 
 if __name__ == "__main__":
