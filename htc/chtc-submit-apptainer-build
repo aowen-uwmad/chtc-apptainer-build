@@ -91,21 +91,21 @@ def main(args: argparse.Namespace) -> None:
 
     # Submit Apptainer build job
 
-    if args.manual_submit == True:
-        try:
-            print(f"\nExiting without submitting a job. User needs to submit a job using '{submit_file}'.\n")
-        except Exception as e:
-            print(f"Unknown exception occurred when reporting generated file names: {e}")
-    elif args.interactive_build == True:
+    if args.interactive_submit == True:
         try:
             interactive_submit(submit_file, executable_file, args)
         except Exception as e:
             print(f"Unknown exception occurred when attempting interactive job submission: {e}")
-    else:
+    elif args.submit == True:
         try:
             regular_submit(submit_file, executable_file, args)
         except Exception as e:
             print(f"Unknown exception occurred when attempting regular job submission: {e}")
+    else:
+        try:
+            print(f"\nBuild files generated! User needs to submit a job using `condor_submit {submit_file}`.\n")
+        except Exception as e:
+            print(f"Unknown exception occurred when reporting generated file names: {e}")
 
 
 if __name__ == "__main__":
@@ -114,16 +114,18 @@ if __name__ == "__main__":
 
     # Instantiate parser
     parser_description: str = f'''
-        Use this script to submit a job that automatically builds an Apptainer container image using the 
-        provided definition file.
+        Use this script to generate the files necessary to submit a job for building an Apptainer container.
         '''
     parser_epilog: str = f'''
         Version {VERSION} -- 
-        This script can be used to submit an HTCondor job for building an Apptainer container on CHTC's High 
-        Throughput Computing (HTC) cluster. User provides the necessary Apptainer definition (.def) file and 
-        the script will create and submit a job that builds the corresponding Apptainer container image (.sif) 
-        file and places the .sif file in the user's /staging directory upon completion. For more information,
-        see <link to CHTC webpage>.
+        This script can be used to create the files needed to submit an HTCondor job to build an Apptainer container 
+        on CHTC's High Throughput Computing (HTC) cluster. User provides the necessary Apptainer definition (.def) 
+        file and the script will create the necessary submit (.sub) and executable (.sh) files. Once generated, the
+        user can use the `condor_submit` command to submit a job that builds the Apptainer container image (.sif). 
+        For more information, see <link to CHTC webpage>.
+        
+        The submit file is set up to automatically transfer the container .sif image to the user's /staging directory,
+        unless otherwise specified.
         '''
 
     parser = argparse.ArgumentParser(description=parser_description,
@@ -161,10 +163,10 @@ if __name__ == "__main__":
 
     mutually_exclusive = additional.add_mutually_exclusive_group()
 
-    mutually_exclusive.add_argument('-i', '--interactive-build', action='store_true',
-                        help='Specifies an "interactive" job submission. Once started, user will need to manually execute the build script.')
-    mutually_exclusive.add_argument('-m', '--manual-submit', action='store_true',
-                        help='Generates the necessary files and exits. User will need to manually submit the job using the generated files.')
+    mutually_exclusive.add_argument('-i', '--interactive-submit', action='store_true',
+                        help='Specifies an "interactive" job submission. Once started, user will need to manually execute the .sh script.')
+    mutually_exclusive.add_argument('-s', '--submit', action='store_true',
+                        help='Submit a regular job automatically using the generated submit and executable files.')
 
     # Parse arguments
 
