@@ -85,55 +85,10 @@ def regular_submit(
     print(f"\nSubmitting regular job using '{submit_file}'.\n")
 
 
-def main(args: argparse.Namespace) -> None:
+def get_args(username: str) -> argparse.Namespace:
     """
-    Processes arguments, generates files, and submits Apptainer build
+    Creates parser for parsing arguments
     """
-
-    # Check that argument values are valid, do cleanup
-
-    args = validate(args)
-
-    # Create necessary files
-
-    submit_file, executable_file = generate_files(args)
-
-    # Verbose text for troubleshooting
-
-    if args.verbose == True:
-        verbose_text = generate_verbose_text(submit_file, executable_file, args)
-        print(verbose_text)
-
-    # Submit Apptainer build job
-
-    if args.interactive_submit == True:
-        try:
-            interactive_submit(submit_file, executable_file, args)
-        except Exception as e:
-            print(
-                f"Unknown exception occurred when attempting interactive job submission: {e}"
-            )
-    elif args.submit == True:
-        try:
-            regular_submit(submit_file, executable_file, args)
-        except Exception as e:
-            print(
-                f"Unknown exception occurred when attempting regular job submission: {e}"
-            )
-    else:
-        try:
-            print(
-                f"\nBuild files generated! User needs to submit a job using `condor_submit {submit_file}`.\n"
-            )
-        except Exception as e:
-            print(
-                f"Unknown exception occurred when reporting generated file names: {e}"
-            )
-
-
-if __name__ == "__main__":
-    # Get user information
-    username: str = str(pwd.getpwuid(os.getuid())[0])
 
     # Instantiate parser
     parser_description: str = f"""
@@ -228,10 +183,61 @@ if __name__ == "__main__":
         help="Submit a regular job automatically using the generated submit and executable files.",
     )
 
-    # Parse arguments
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+def main(args: argparse.Namespace) -> None:
+    """
+    Processes arguments, generates files, and submits Apptainer build
+    """
+
+    # Check that argument values are valid, do cleanup
+
+    args = validate(args)
+
+    # Create necessary files
+
+    submit_file, executable_file = generate_files(args)
+
+    # Verbose text for troubleshooting
+
+    if args.verbose == True:
+        verbose_text = generate_verbose_text(submit_file, executable_file, args)
+        print(verbose_text)
+
+    # Submit Apptainer build job
+
+    if args.interactive_submit == True:
+        try:
+            interactive_submit(submit_file, executable_file, args)
+        except Exception as e:
+            print(
+                f"Unknown exception occurred when attempting interactive job submission: {e}"
+            )
+    elif args.submit == True:
+        try:
+            regular_submit(submit_file, executable_file, args)
+        except Exception as e:
+            print(
+                f"Unknown exception occurred when attempting regular job submission: {e}"
+            )
+    else:
+        try:
+            print(
+                f"\nBuild files generated! User needs to submit a job using `condor_submit {submit_file}`.\n"
+            )
+        except Exception as e:
+            print(
+                f"Unknown exception occurred when reporting generated file names: {e}"
+            )
+
+
+if __name__ == "__main__":
+    # Get user information
+    username: str = str(pwd.getpwuid(os.getuid())[0])
+
+    # Parse arguments
+    args = get_args(username)
 
     # Execute
-
     main(args)
