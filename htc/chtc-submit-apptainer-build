@@ -20,12 +20,15 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
     Checks that argument values are proper and ready to be used by the rest of the script.
     """
 
-    # Check that `definition` is correct
+    # Check that `definition` is a valid file
 
-    # Check that `name` is correct
-
+    # Generate `name` if `name` is not user-defined
     if (args.name is None) or (args.name == "<name>.sif"):
         args.name = f"{args.definition[:-4]}.sif"
+
+    # Check that `name` ends in `.sif`
+
+    # Check that output destination `path` does not already contain `name`
 
     return args
 
@@ -37,6 +40,10 @@ def generate_files(args: argparse.Namespace) -> tuple[str, str]:
 
     submit_file: str = "apptainer-build.sub"
     executable_file: str = "apptainer-build.sh"
+
+    # Write `submit_file`
+
+    # Write `executable_file`
 
     return submit_file, executable_file
 
@@ -78,11 +85,15 @@ def interactive_submit(
 ) -> None:
     print(f"\nSubmitting interactive job using '{submit_file}'.\n")
 
+    # Submit interactive job (if that is even possible via a Python script!!)
+
 
 def regular_submit(
     submit_file: str, executable_file: str, args: argparse.Namespace
 ) -> None:
     print(f"\nSubmitting regular job using '{submit_file}'.\n")
+
+    # Submit regular job using the Python bindings
 
 
 def get_args(username: str) -> argparse.Namespace:
