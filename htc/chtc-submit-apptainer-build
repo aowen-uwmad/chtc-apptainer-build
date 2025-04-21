@@ -43,6 +43,19 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
         args.name = f"{args.name}.sif"
 
     # Check that output destination `path` does not already contain `name`
+    overwrite_warning: str = f'Warning: Output destination (may) already contain {args.name} - if so, it will be overwritten by this job!'
+
+    if args.path[-1] == '/':
+        args.path = args.path[:-1]
+
+    if args.path[:4] == 'osdf' or args.path[:7] == 'pelican':
+        print(overwrite_warning)
+
+    destination = f"{args.path}/{args.name}"
+    if os.path.isfile(destination):
+        print(overwrite_warning)
+
+    args.destination: str = destination
 
     return args
 
