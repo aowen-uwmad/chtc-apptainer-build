@@ -33,7 +33,10 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     # Generate `name` if `name` is not user-defined
     if (args.name is None) or (args.name == "<name>.sif"):
-        args.name = f"{args.definition[:-4]}.sif"
+        if args.definition[-4:] == '.def':
+            args.name = f"{args.definition[:-4]}.sif"
+        else:
+            args.name = f"{args.definition}.sif"
 
     # Check that `name` ends in `.sif`
 
