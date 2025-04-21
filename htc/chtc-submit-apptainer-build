@@ -91,11 +91,11 @@ batch_name = $(job_name)
 
 executable = apptainer_build.sh
 transfer_executable = True
-arguments = {args.name}, {args.definition}
+arguments = {args.full_name}, {args.definition}
 transfer_input_files = {args.full_definition}
 
-transfer_output_files = {args.name}
-transfer_output_remaps = "{args.name} = {args.destination}"
+transfer_output_files = {args.full_name}
+transfer_output_remaps = "{args.full_name} = {args.destination}"
 
 output = $(job_name).out
 error = $(job_name).err
@@ -125,27 +125,34 @@ queue
 
     # fmt: off
     executable_contents: str = (
-        f"""
-#!/bin/bash
+        f"""#!/bin/bash
 
+# Read arguments from submit file
 container_name={bash_arg1}
 container_definition={bash_arg2}
 
-echo -e "Building container {bash_container_name} on $(hostname).\n"
+# Print location of build (useful for troubleshooting)
+echo -e "Building container {bash_container_name} on $(hostname).\\n"
 
+# Miscellaneous setup things; typically not required, but erring on the safe side.
 export PATH
-
 chmod 777 ./tmp
 
+# The actual build command. Piped into `tee` so that messages are streamed to build_{bash_container_shortname}.out
 apptainer build --bind ./tmp:/tmp {bash_container_name} {bash_container_definition} 2>&1 | tee {bash_container_shortname}.log
 
+# If running the build command manually, could use this instead:
+#    apptainer build --bind ./tmp:/tmp {bash_container_name} {bash_container_definition}
+
+# Grab exit code from the build command
 exit_code="$PIPESTATUS"
 
+# Check if container built successfully
 if [ ! -f "{bash_container_name}" ] || [[ "$exit_code" != "0" ]]; then
-    echo -e "\nContainer build failed - see build_{bash_container_shortname}.err for details."
+    echo -e "\\nContainer build failed - see build_{bash_container_shortname}.err for details."
     exit 1
 else
-    echo -e "\nContainer build appears to have been successful.".
+    echo -e "\\nContainer build appears to have been successful.".
     exit 0
 fi
 """
