@@ -21,6 +21,15 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
     """
 
     # Check that `definition` is a valid file
+    if not os.path.isfile(args.definition):
+        if args.definition[-4:] == '.def':
+            raise ValueError(f'Failed to locate definition file: {args.definition}')
+        else:
+            with_extension = f'{args.definition}.def'
+            if os.path.isfile(with_extension):
+                args.definition = with_extension
+            else:
+                raise ValueError(f'Failed to locate definition file: {args.definition} NOR {with_extension}')
 
     # Generate `name` if `name` is not user-defined
     if (args.name is None) or (args.name == "<name>.sif"):
