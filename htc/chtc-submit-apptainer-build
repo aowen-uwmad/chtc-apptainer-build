@@ -89,7 +89,7 @@ universe = vanilla
 log = $(job_name).log
 batch_name = $(job_name)
 
-executable = apptainer_build.sh
+executable = apptainer-build.sh
 transfer_executable = True
 arguments = {args.full_name}, {args.definition}
 transfer_input_files = {args.full_definition}
