@@ -111,10 +111,48 @@ request_disk = 30GB
 queue
 """
 
-    with open(submit_file, 'w') as f:
+    with open(submit_file, "w") as f:
         f.write(submit_contents)
 
     # Write `executable_file`
+    # Following definitions are used to include literal {} in the f-string block
+    #   without using escapes (`\`) in the block, which the black formatter does not agree with
+    bash_arg1 = "${1}"
+    bash_arg2 = "${2}"
+    bash_container_name = "${container_name}"
+    bash_container_definition = "${container_definition}"
+    bash_container_shortname = "${container_name::-4}"
+
+    # fmt: off
+    executable_contents: str = (
+        f"""
+#!/bin/bash
+
+container_name={bash_arg1}
+container_definition={bash_arg2}
+
+echo -e "Building container {bash_container_name} on $(hostname).\n"
+
+export PATH
+
+chmod 777 ./tmp
+
+apptainer build --bind ./tmp:/tmp {bash_container_name} {bash_container_definition} 2>&1 | tee {bash_container_shortname}.log
+
+exit_code="$PIPESTATUS"
+
+if [ ! -f "{bash_container_name}" ] || [[ "$exit_code" != "0" ]]; then
+    echo -e "\nContainer build failed - see build_{bash_container_shortname}.err for details."
+    exit 1
+else
+    echo -e "\nContainer build appears to have been successful.".
+    exit 0
+fi
+"""
+    )
+    # fmt: on
+    with open(executable_file, "w") as f:
+        f.write(executable_contents)
 
     return submit_file, executable_file
 
