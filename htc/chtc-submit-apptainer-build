@@ -46,13 +46,13 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     # Check that output destination `path` does not already contain `name`
     overwrite_warning: str = (
-        f"Warning: Output destination (may) already contain {args.name} - if so, it will be overwritten by this job!"
+        f"WARNING: Output destination (may) already contain {args.name} - if so, it will be overwritten by this job!"
     )
 
     if args.path[-1] == "/":
         args.path = args.path[:-1]
 
-    if args.path[:4] == "osdf" or args.path[:7] == "pelican":
+    if (args.path[:4] in ["osdf", "file"]) or args.path[:7] == "pelican":
         print(overwrite_warning)
 
     destination = f"{args.path}/{args.name}"
@@ -103,7 +103,7 @@ def generate_verbose_text(
     )
 
     text_list.append(
-        f"    The build job will create a .sif file at:\n        {args.path}/{args.name}"
+        f"    The build job will create a .sif file at:\n        {args.destination}"
     )
 
     verbose_text = "\n".join(text_list)
