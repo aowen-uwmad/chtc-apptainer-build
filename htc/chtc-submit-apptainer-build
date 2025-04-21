@@ -25,13 +25,19 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
         if args.definition[-4:] == ".def":
             raise ValueError(f"Failed to locate definition file: {args.definition}")
         else:
-            with_extension = f"{args.definition}.def"
+            with_extension: str = f"{args.definition}.def"
             if os.path.isfile(with_extension):
                 args.definition = with_extension
             else:
                 raise ValueError(
                     f"Failed to locate definition file: {args.definition} NOR {with_extension}"
                 )
+
+    # If provided `definition` is a path, make `definition` a basename and put full path in `full_definition`
+    args.full_definition = args.definition
+    if "/" in args.definition:
+        definition_basename: str = args.definition.split("/")[-1]
+        args.definition = definition_basename
 
     # Generate `name` if `name` is not user-defined
     if (args.name is None) or (args.name == "<name>.sif"):
@@ -42,11 +48,14 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     # Check that `name` ends in `.sif`
     if args.name[-4:] != ".sif":
-        args.name = f"{args.name}.sif"
+        args.full_name = f"{args.name}.sif"
+    else:
+        args.full_name = f"{args.name}"
+        args.name = args.name[:-4]
 
     # Check that output destination `path` does not already contain `name`
     overwrite_warning: str = (
-        f"WARNING: Output destination (may) already contain {args.name} - if so, it will be overwritten by this job!"
+        f"WARNING: Output destination (may) already contain {args.full_name} - if so, it will be overwritten by this job!"
     )
 
     if args.path[-1] == "/":
@@ -55,7 +64,7 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
     if (args.path[:4] in ["osdf", "file"]) or args.path[:7] == "pelican":
         print(overwrite_warning)
 
-    destination = f"{args.path}/{args.name}"
+    destination = f"{args.path}/{args.full_name}"
     if os.path.isfile(destination):
         print(overwrite_warning)
 
@@ -73,6 +82,37 @@ def generate_files(args: argparse.Namespace) -> tuple[str, str]:
     executable_file: str = "apptainer-build.sh"
 
     # Write `submit_file`
+    submit_contents: str = f"""
+job_name = build_{args.name}
+
+universe = vanilla
+log = $(job_name).log
+batch_name = $(job_name)
+
+executable = apptainer_build.sh
+transfer_executable = True
+arguments = {args.name}, {args.definition}
+transfer_input_files = {args.full_definition}
+
+transfer_output_files = {args.name}
+transfer_output_remaps = "{args.name} = {args.destination}"
+
+output = $(job_name).out
+error = $(job_name).err
+stream_output = True
+stream_error = True
+
++IsBuildJob = True
+
+request_cpus = 8
+request_memory = 16GB
+request_disk = 30GB
+
+queue
+"""
+
+    with open(submit_file, 'w') as f:
+        f.write(submit_contents)
 
     # Write `executable_file`
 
@@ -196,7 +236,7 @@ def get_args(username: str) -> argparse.Namespace:
         required=False,
         type=str,
         metavar="<path>",
-        default=f"/staging/{username}",
+        default=f"file:///staging/{username}",
         help="Defines a transfer_output_remap that transfers the <name>.sif file to the provided destination.",
     )
     additional.add_argument(
