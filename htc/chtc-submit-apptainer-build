@@ -91,7 +91,7 @@ batch_name = $(job_name)
 
 executable = apptainer-build.sh
 transfer_executable = True
-arguments = {args.full_name}, {args.definition}
+arguments = {args.full_name} {args.definition}
 transfer_input_files = {args.full_definition}
 
 transfer_output_files = {args.full_name}
