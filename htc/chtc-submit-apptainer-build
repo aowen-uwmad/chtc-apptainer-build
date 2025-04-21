@@ -39,6 +39,8 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
             args.name = f"{args.definition}.sif"
 
     # Check that `name` ends in `.sif`
+    if args.name[-4:] != '.sif':
+        args.name = f"{args.name}.sif"
 
     # Check that output destination `path` does not already contain `name`
 
