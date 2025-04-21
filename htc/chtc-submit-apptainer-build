@@ -94,8 +94,8 @@ transfer_executable = True
 arguments = {args.full_name} {args.definition}
 transfer_input_files = {args.full_definition}
 
-transfer_output_files = {args.full_name}
-transfer_output_remaps = "{args.full_name} = {args.destination}"
+transfer_output_files = {args.full_name}, {args.name}.log
+transfer_output_remaps = "{args.full_name} = {args.destination}; {args.name}.log = {args.path}/{args.name}.log"
 
 output = $(job_name).out
 error = $(job_name).err
@@ -131,15 +131,34 @@ queue
 container_name={bash_arg1}
 container_definition={bash_arg2}
 
-# Print location of build (useful for troubleshooting)
-echo -e "Building container {bash_container_name} on $(hostname).\\n"
+# Printing information about the build job
+cat << EOF | tee {bash_container_shortname}.log
+chtc-apptainer-build-submit
+
+     version: {VERSION}
+    datetime: $(date -Iseconds)
+  build_host: $(hostname -f)
+  definition: {bash_container_definition}
+output_image: {bash_container_name}
+
+EOF
+
+# Print copy of definition file (useful for troubleshooting)
+cat << EOF | tee -a {bash_container_shortname}.log
+#=====================================#
+# {bash_container_definition}
+#-------------------------------------#
+$(cat {bash_container_definition})
+#=====================================#
+
+EOF
 
 # Miscellaneous setup things; typically not required, but erring on the safe side.
 export PATH
 chmod 777 ./tmp
 
 # The actual build command. Piped into `tee` so that messages are streamed to build_{bash_container_shortname}.out
-apptainer build --bind ./tmp:/tmp {bash_container_name} {bash_container_definition} 2>&1 | tee {bash_container_shortname}.log
+apptainer build --bind ./tmp:/tmp {bash_container_name} {bash_container_definition} 2>&1 | tee -a {bash_container_shortname}.log
 
 # If running the build command manually, could use this instead:
 #    apptainer build --bind ./tmp:/tmp {bash_container_name} {bash_container_definition}
@@ -171,7 +190,7 @@ def generate_verbose_text(
     Generates text with debugging information.
     """
 
-    text_list: list[str] = []
+    text_list: list[str] = [f'chtc-submit-apptainer-build v{VERSION}\n']
 
     text_list.append('Original Arguments:')
     for k,v in original_args.items():
@@ -184,21 +203,21 @@ def generate_verbose_text(
     text_list.append('')
 
     text_list.append(
-        f"\n    You provided the definition file:\n        {args.definition}"
+        f"\nYou provided the definition file:\n    {args.definition}"
     )
 
     if args.files is not None:
-        files_list: str = "\n        ".join(args.files)
+        files_list: str = "\n    ".join(args.files)
         text_list.append(
-            f"    You also specified these additional files to transfer:\n        {files_list}"
+            f"You also specified these additional files to transfer:\n    {files_list}"
         )
 
     text_list.append(
-        f"    This script generated the files:\n        {submit_file}\n        {executable_file}"
+        f"This script generated the files:\n    {submit_file}\n    {executable_file}"
     )
 
     text_list.append(
-        f"    The build job will create a .sif file at:\n        {args.destination}"
+        f"The build job will create a .sif file at:\n    {args.destination}"
     )
 
     verbose_text = "\n".join(text_list)
@@ -210,6 +229,8 @@ def interactive_submit(
     submit_file: str, executable_file: str, args: argparse.Namespace
 ) -> None:
     print(f"\nSubmitting interactive job using '{submit_file}'.\n")
+
+    raise NotImplemented('This feature is not yet implemented.')
 
     # Submit interactive job (if that is even possible via a Python script!!)
 
