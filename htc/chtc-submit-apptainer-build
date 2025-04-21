@@ -165,13 +165,23 @@ fi
 
 
 def generate_verbose_text(
-    submit_file: str, executable_file: str, args: argparse.Namespace
+    submit_file: str, executable_file: str, args: argparse.Namespace, original_args: dict 
 ) -> str:
     """
     Generates text with debugging information.
     """
 
     text_list: list[str] = []
+
+    text_list.append('Original Arguments:')
+    for k,v in original_args.items():
+        text_list.append(f'    {k}={v}')
+    text_list.append('')
+
+    text_list.append('Cleaned Arguments:')
+    for k,v in args.__dict__.items():
+        text_list.append(f'    {k}={v}')
+    text_list.append('')
 
     text_list.append(
         f"\n    You provided the definition file:\n        {args.definition}"
@@ -319,7 +329,7 @@ def main(args: argparse.Namespace) -> None:
     """
 
     # Check that argument values are valid, do cleanup
-
+    original_args: dict = {k: v for k,v in args.__dict__.items()}
     args = validate(args)
 
     # Create necessary files
@@ -329,7 +339,7 @@ def main(args: argparse.Namespace) -> None:
     # Verbose text for troubleshooting
 
     if args.verbose == True:
-        verbose_text = generate_verbose_text(submit_file, executable_file, args)
+        verbose_text = generate_verbose_text(submit_file, executable_file, args, original_args)
         print(verbose_text)
 
     # Submit Apptainer build job
