@@ -500,7 +500,7 @@ def main(args: argparse.Namespace) -> None:
         try:
             print(
                 f"""
-{PRINT_PREFIX} Done! To submit Apptainer build job, run:
+{PRINT_PREFIX} Done! Submit the Apptainer build job to HTCondor using:
     condor_submit {submit_file}
 """
             )
