@@ -12,8 +12,11 @@ import argparse
 import os
 import pwd
 import subprocess
+from time import sleep
 
 VERSION: str = "0.1"
+PRINT_DELAY: float = 1.5
+PRINT_PREFIX: str = "%"
 
 
 def validate(args: argparse.Namespace) -> argparse.Namespace:
@@ -96,7 +99,7 @@ universe = vanilla
 log = $(job_name).log
 batch_name = $(job_name)
 
-executable = apptainer-build.sh
+executable = {executable_file}
 transfer_executable = True
 arguments = {args.full_name} {args.definition}
 transfer_input_files = {args.full_definition}
@@ -187,6 +190,13 @@ fi
     with open(executable_file, "w") as f:
         f.write(executable_contents)
 
+    sleep(PRINT_DELAY)
+    print(
+        f"""
+{PRINT_PREFIX} Created submit file "{submit_file}" and executable "{executable_file}".
+"""
+    )
+
     return submit_file, executable_file
 
 
@@ -234,7 +244,10 @@ def generate_verbose_text(
 
 
 def shell_exec(
-    command_list: list[str], combined_std: bool = True, timeout: int = 30
+    command_list: list[str],
+    capture_std: bool = False,
+    combined_std: bool = True,
+    timeout: int = 30,
 ) -> subprocess.CompletedProcess:
     """
     Wrapper function for running shell commands
@@ -254,17 +267,23 @@ def shell_exec(
         else:
             clean_list.extend(split_list)
 
-    if combined_std:
-        exec_command: subprocess.CompletedProcess = subprocess.run(
-            clean_list,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=timeout,
-        )
+    if capture_std:
+        if combined_std:
+            exec_command: subprocess.CompletedProcess = subprocess.run(
+                clean_list,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=timeout,
+            )
+        else:
+            exec_command = subprocess.run(
+                clean_list,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout,
+            )
     else:
-        exec_command = subprocess.run(
-            clean_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout
-        )
+        exec_command = subprocess.run(clean_list, timeout=timeout)
 
     return exec_command
 
@@ -289,11 +308,16 @@ def interactive_submit(
 def regular_submit(
     submit_file: str, executable_file: str, args: argparse.Namespace
 ) -> None:
-    print(f"\nSubmitting regular job using '{submit_file}'.\n")
+    sleep(PRINT_DELAY)
+    print(
+        f"""{PRINT_PREFIX} Executing command:
+    condor_submit {submit_file}
+"""
+    )
 
     # IDEALLY: Submit regular job using the Python bindings.
     # In practice, however, run into the "Job credentials not found" error.
-
+    sleep(PRINT_DELAY)
     try:
         exec_submit_command = shell_exec(
             ["condor_submit", submit_file], timeout=args.timeout
@@ -301,12 +325,27 @@ def regular_submit(
     except subprocess.TimeoutExpired as s:
         raise subprocess.TimeoutExpired(s)
 
-    print(byte_to_str(exec_submit_command.stdout))
+    # print(byte_to_str(exec_submit_command.stdout))
+
+    # Give illusion of "processing"
+    sleep(PRINT_DELAY)
 
     if exec_submit_command.returncode == 0:
-        print("Successfully submitted Apptainer build job!")
+        print(
+            f"""
+{PRINT_PREFIX} Submit command successful!
+  - Monitor job status:
+      condor_watch_q -f build_{args.name}.log
+  - Monitor build progress (after job has started):
+      tail -f build_{args.name}.out
+"""
+        )
     else:
-        print("FAILED to submit Apptainer build job!")
+        print(
+            f"""
+{PRINT_PREFIX} Submit command FAILED!
+"""
+        )
 
 
 def get_args(username: str) -> argparse.Namespace:
@@ -460,7 +499,10 @@ def main(args: argparse.Namespace) -> None:
     else:
         try:
             print(
-                f"\nBuild files generated! User needs to submit a job using `condor_submit {submit_file}`.\n"
+                f"""
+{PRINT_PREFIX} Done! To submit Apptainer build job, run:
+    condor_submit {submit_file}
+"""
             )
         except Exception as e:
             print(
