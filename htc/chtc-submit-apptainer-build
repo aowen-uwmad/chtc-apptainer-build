@@ -74,11 +74,14 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     args.destination: str = destination
 
-    ## Convert timeout to an integer
-    # try:
-    # args.timeout = int(args.timeout)
-    # except ValueError:
-    #
+    # Convenient for "ls" reference
+    if args.path[:8] == "file:///":
+        # Want to keep one slash in the front
+        args.path_no_file = args.path[7:]
+    elif args.path[:7] == "file://":
+        args.path_no_file = args.path[6:]
+    else:
+        args.path_no_file = str(args.path)
 
     return args
 
@@ -246,6 +249,8 @@ def generate_verbose_text(
         f"The build job will create a .sif file at:\n    {args.destination}"
     )
 
+    text_list.append("")
+
     verbose_text = "\n".join(text_list)
 
     return verbose_text
@@ -346,6 +351,8 @@ def regular_submit(
       condor_watch_q -f build_{args.name}.log
   - Monitor build progress (after job has started):
       tail -f build_{args.name}.out
+  - Once done, find "{args.name}.sif" and "{args.name}.log" in:
+      {args.path_no_file}
 """
         )
     else:
@@ -508,8 +515,7 @@ def main(args: argparse.Namespace) -> None:
         try:
             sleep(PRINT_DELAY)
             print(
-                f"""
-{PRINT_PREFIX} Done! Submit the Apptainer build job to HTCondor using:
+                f"""{PRINT_PREFIX} Done! Submit the Apptainer build job to HTCondor using:
     condor_submit {submit_file}
 """
             )
@@ -517,6 +523,8 @@ def main(args: argparse.Namespace) -> None:
             print(
                 f"Unknown exception occurred when reporting generated file names: {e}"
             )
+
+    sleep(PRINT_DELAY)
 
 
 if __name__ == "__main__":
