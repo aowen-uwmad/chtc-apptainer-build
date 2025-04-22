@@ -209,6 +209,12 @@ def generate_verbose_text(
     """
     Generates text with debugging information.
     """
+    sleep(PRINT_DELAY)
+    print(
+        f"""{PRINT_PREFIX} Printing verbose output:
+"""
+    )
+    sleep(PRINT_DELAY)
 
     text_list: list[str] = [f"chtc-submit-apptainer-build v{VERSION}\n"]
 
@@ -222,7 +228,9 @@ def generate_verbose_text(
         text_list.append(f"    {k}={v}")
     text_list.append("")
 
-    text_list.append(f"\nYou provided the definition file:\n    {args.definition}")
+    text_list.append(
+        f"Summary\n=======\nYou provided the definition file:\n    {args.definition}"
+    )
 
     if args.files is not None:
         files_list: str = "\n    ".join(args.files)
@@ -498,6 +506,7 @@ def main(args: argparse.Namespace) -> None:
             )
     else:
         try:
+            sleep(PRINT_DELAY)
             print(
                 f"""
 {PRINT_PREFIX} Done! Submit the Apptainer build job to HTCondor using:
