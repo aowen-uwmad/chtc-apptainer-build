@@ -329,7 +329,9 @@ def interactive_submit(
 ) -> None:
     print(f"\nSubmitting interactive job using '{submit_file}'.\n")
 
-    raise NotImplemented("This feature is not yet implemented.")
+    raise NotImplementedError(
+        "Error: The interactive submit feature ('-i'/'--interactive') is not yet implemented."
+    )
 
     # Submit interactive job (if that is even possible via a Python script!!)
 
@@ -514,6 +516,8 @@ def main(args: argparse.Namespace) -> None:
     if args.interactive_submit == True:
         try:
             interactive_submit(submit_file, executable_file, args)
+        except NotImplementedError as e:
+            print(e)
         except Exception as e:
             print(
                 f"Unknown exception occurred when attempting interactive job submission: {e}"
