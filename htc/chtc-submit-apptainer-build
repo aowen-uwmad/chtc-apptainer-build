@@ -43,6 +43,12 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
         definition_basename: str = args.definition.split("/")[-1]
         args.definition = definition_basename
 
+    # Setting files argument
+    if args.files is None:
+        args.files = [args.full_definition]
+    else:
+        args.files = [args.full_definition, *args.files]
+
     # Generate `name` if `name` is not user-defined
     if (args.name is None) or (args.name == "<name>.sif"):
         if args.definition[-4:] == ".def":
@@ -66,7 +72,15 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
         args.path = args.path[:-1]
 
     if args.path[:4] in ["osdf", "peli"]:
-        print(overwrite_warning)
+        if args.submit or args.interactive_submit:
+            confirm: str = input(
+                f"{overwrite_warning}\n         Do you wish to proceed? (y/n)\n> "
+            )
+            if not confirm.lower() in ["y", "yes"]:
+                print('Aborting! Rerun without "-s"/"-i" to generate submit files.')
+                exit(1)
+        else:
+            print(overwrite_warning)
 
     destination = f"{args.path}/{args.full_name}"
     if os.path.isfile(destination):
@@ -94,8 +108,7 @@ def generate_files(args: argparse.Namespace) -> tuple[str, str]:
     submit_file: str = "apptainer-build.sub"
     executable_file: str = "apptainer-build.sh"
 
-    file_transfer_list = [args.full_definition, *args.files]
-    file_transfer_string = ", ".join([str(i) for i in file_transfer_list])
+    file_transfer_string = ", ".join([str(i) for i in args.files])
 
     # Write `submit_file`
     submit_contents: str = f"""
