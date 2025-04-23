@@ -94,6 +94,9 @@ def generate_files(args: argparse.Namespace) -> tuple[str, str]:
     submit_file: str = "apptainer-build.sub"
     executable_file: str = "apptainer-build.sh"
 
+    file_transfer_list = [args.full_definition, *args.files]
+    file_transfer_string = ", ".join([str(i) for i in file_transfer_list])
+
     # Write `submit_file`
     submit_contents: str = f"""
 job_name = build_{args.name}
@@ -102,10 +105,10 @@ universe = vanilla
 log = $(job_name).log
 batch_name = $(job_name)
 
-executable = {executable_file}
+executable = apptainer-build.sh
 transfer_executable = True
 arguments = {args.full_name} {args.definition}
-transfer_input_files = {args.full_definition}
+transfer_input_files = {file_transfer_string}
 
 transfer_output_files = {args.full_name}, {args.name}.log
 transfer_output_remaps = "{args.full_name} = {args.destination}; {args.name}.log = {args.path}/{args.name}.log"
