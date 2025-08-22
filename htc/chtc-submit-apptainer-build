@@ -123,7 +123,7 @@ transfer_executable = True
 arguments = {args.full_name} {args.definition}
 transfer_input_files = {file_transfer_string}
 
-transfer_output_files = {args.full_name}, {args.name}.log
+transfer_output_files = {args.full_name}, {args.name}.log, {args.definition}
 transfer_output_remaps = "{args.full_name} = {args.destination}; {args.name}.log = {args.path}/{args.name}.log"
 
 output = $(job_name).out
@@ -324,39 +324,44 @@ def byte_to_str(byte_string: bytes, encoding="utf-8") -> str:
     return str(byte_string, encoding)
 
 
-def interactive_submit(
-    submit_file: str, executable_file: str, args: argparse.Namespace
+def submit_command(
+    submit_file: str, executable_file: str, options_str: str = None, timeout: int = 30
 ) -> None:
-    print(f"\nSubmitting interactive job using '{submit_file}'.\n")
+    sleep(PRINT_DELAY)
+    if options_str:
+        print(
+            f"""{PRINT_PREFIX} Executing command:
+    condor_submit {options_str} {submit_file}
+"""
+        )
+        exec_str_list = ["condor_submit", options_str, submit_file]
+    else:
+        print(
+            f"""{PRINT_PREFIX} Executing command:
+    condor_submit {submit_file}
+"""
+        )
+        exec_str_list = ["condor_submit", submit_file]
 
-    raise NotImplementedError(
-        "Error: The interactive submit feature ('-i'/'--interactive') is not yet implemented."
-    )
+    # IDEALLY: Submit job using the Python bindings.
+    # In practice, however, run into the "Job credentials not found" error.
+    sleep(PRINT_DELAY)
+    try:
+        exec_submit_command = shell_exec(exec_str_list, timeout=timeout)
+    except subprocess.TimeoutExpired as s:
+        raise subprocess.TimeoutExpired(s)
 
-    # Submit interactive job (if that is even possible via a Python script!!)
+    return exec_submit_command
 
 
 def regular_submit(
     submit_file: str, executable_file: str, args: argparse.Namespace
 ) -> None:
     sleep(PRINT_DELAY)
-    print(
-        f"""{PRINT_PREFIX} Executing command:
-    condor_submit {submit_file}
-"""
+
+    exec_submit_command = submit_command(
+        submit_file, executable_file, timeout=args.timeout
     )
-
-    # IDEALLY: Submit regular job using the Python bindings.
-    # In practice, however, run into the "Job credentials not found" error.
-    sleep(PRINT_DELAY)
-    try:
-        exec_submit_command = shell_exec(
-            ["condor_submit", submit_file], timeout=args.timeout
-        )
-    except subprocess.TimeoutExpired as s:
-        raise subprocess.TimeoutExpired(s)
-
-    # print(byte_to_str(exec_submit_command.stdout))
 
     # Give illusion of "processing"
     sleep(PRINT_DELAY)
@@ -364,7 +369,7 @@ def regular_submit(
     if exec_submit_command.returncode == 0:
         print(
             f"""
-{PRINT_PREFIX} Submit command successful!
+{PRINT_PREFIX} Submit command successful.
   - Monitor job status:
       condor_watch_q -f build_{args.name}.log
   - Monitor build progress (after job has started):
@@ -379,6 +384,43 @@ def regular_submit(
 {PRINT_PREFIX} Submit command FAILED!
 """
         )
+
+
+def interactive_submit(
+    submit_file: str, executable_file: str, args: argparse.Namespace
+) -> None:
+    sleep(PRINT_DELAY)
+    print(
+        f"""{PRINT_PREFIX} Submitting interactive job.
+  - To cancel, use the keyboard shortcut Ctrl+C
+  - Once started, run the command
+      bash {executable_file} {args.full_name} {args.definition}
+  - When finished, quit the interactive job with
+      exit
+"""
+    )
+    sleep(PRINT_DELAY)
+
+    # Submit interactive job (if that is even possible via a Python script!!)
+    exec_submit_command = submit_command(
+        submit_file, executable_file, "-i", timeout=None
+    )
+
+    if exec_submit_command.returncode == 0:
+        print(
+            f"""
+{PRINT_PREFIX} Interactive submission successful.
+  - If container build was successful, find "{args.name}.sif" and "{args.name}.log" in:
+      {args.path_no_file}
+  - If container build was NOT successful, the job is likely on hold. 
+    Find JobID using
+      condor_q -hold
+    Then remove with
+      condor_rm JOB_ID
+"""
+        )
+    else:
+        print(f"{PRINT_PREFIX} Interactive submit FAILED!\n")
 
 
 def get_args(username: str) -> argparse.Namespace:
