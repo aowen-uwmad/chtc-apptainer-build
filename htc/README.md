@@ -13,3 +13,9 @@ Then see the help text with
 ```bash
 chtc-submit-apptainer-build --help
 ```
+
+If you encounter an error `-bash: chtc-submit-apptainer-build: command not found`, preface the command with `python`:
+
+```bash
+python chtc-submit-apptainer-build --help
+```
