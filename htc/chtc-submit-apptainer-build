@@ -707,4 +707,9 @@ if __name__ == "__main__":
     args = get_args(username)
 
     # Execute
-    main(args)
+    try:
+        main(args)
+    except KeyboardInterrupt:
+        print("")
+        print_error("Command aborted!")
+        exit(1)
