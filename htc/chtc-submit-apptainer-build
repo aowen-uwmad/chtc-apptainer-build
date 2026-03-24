@@ -17,6 +17,22 @@ PRINT_DELAY: float = 1.5
 PRINT_PREFIX: str = "%"
 
 
+def print_error(message: str) -> None:
+    """
+    Prints an error message in a consistent format.
+    """
+    print(f"\n❌ ERROR: {message}\n")
+
+
+def print_error_details(details: list[str]) -> None:
+    """
+    Prints detailed error information with proper indentation.
+    """
+    for detail in details:
+        print(f"   {detail}")
+    print()
+
+
 def validate(args: argparse.Namespace) -> argparse.Namespace:
     """
     Checks that argument values are proper and ready to be used by the rest of the script.
@@ -25,15 +41,46 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
     # Check that `definition` is a valid file
     if not os.path.isfile(args.definition):
         if args.definition[-4:] == ".def":
-            raise ValueError(f"Failed to locate definition file: {args.definition}")
+            # File with .def extension was not found
+            cwd = os.getcwd()
+            abs_path = os.path.abspath(args.definition)
+            error_msg = f"Definition file not found: '{args.definition}'"
+            print_error(error_msg)
+            print_error_details(
+                [
+                    f"Checked: {abs_path}",
+                    f"Current directory: {cwd}",
+                    "Suggestions:",
+                    "  • Verify the file exists in the specified location",
+                    "  • Use an absolute path if the file is in a different directory",
+                    "  • Check that the filename is spelled correctly",
+                ]
+            )
+            exit(1)
         else:
             with_extension: str = f"{args.definition}.def"
             if os.path.isfile(with_extension):
                 args.definition = with_extension
             else:
-                raise ValueError(
-                    f"Failed to locate definition file: {args.definition} NOR {with_extension}"
+                # Neither the provided name nor name.def was found
+                cwd = os.getcwd()
+                abs_path_no_ext = os.path.abspath(args.definition)
+                abs_path_with_ext = os.path.abspath(with_extension)
+                error_msg = f"Definition file not found"
+                print_error(error_msg)
+                print_error_details(
+                    [
+                        f"Checked: {abs_path_no_ext}",
+                        f"Checked: {abs_path_with_ext}",
+                        f"Current directory: {cwd}",
+                        "Suggestions:",
+                        "  • Verify the file exists in the current directory",
+                        "  • Use an absolute path if the file is elsewhere",
+                        "  • If you omitted the extension, ensure the file ends in .def",
+                        "  • Check that the filename is spelled correctly",
+                    ]
                 )
+                exit(1)
 
     # If provided `definition` is a path, make `definition` a basename and put full path in `full_definition`
     args.full_definition = args.definition
