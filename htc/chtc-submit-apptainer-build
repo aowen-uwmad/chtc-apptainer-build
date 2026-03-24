@@ -66,6 +66,35 @@ def print_warning(message: str) -> None:
     print(f"⚠️  WARNING: {message}")
 
 
+def prompt_yes_no(message: str, default: str = None) -> bool:
+    """
+    Prompts the user for a yes/no answer with validation.
+
+    default: one of None, 'y', 'n'
+    Returns True for yes, False for no.
+    """
+    if default not in (None, "y", "n"):
+        raise ValueError("default must be None, 'y', or 'n'")
+
+    prompt = " [y/n] "
+    if default == "y":
+        prompt = " [Y/n] "
+    elif default == "n":
+        prompt = " [y/N] "
+
+    while True:
+        response = input(f"{message}{prompt}").strip().lower()
+
+        if response == "" and default is not None:
+            return default == "y"
+        if response in ["y", "yes"]:
+            return True
+        if response in ["n", "no"]:
+            return False
+
+        print_warning("Please enter 'y' or 'n'.")
+
+
 def print_title_header(title: str) -> None:
     """
     Prints a prominent title header for the script, visually distinct from section headers.
@@ -165,10 +194,12 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
     if args.path[:4] in ["osdf", "peli"]:
         if args.submit or args.interactive_submit:
             print_warning(overwrite_warning)
-            confirm: str = input("Do you wish to proceed? (y/n)\n> ")
-            if not confirm.lower() in ["y", "yes"]:
-                print('Aborting! Rerun without "-s"/"-i" to generate submit files.')
+            if not prompt_yes_no("Do you wish to proceed?", default="n"):
+                print_error(
+                    'Aborting! Rerun without "-s"/"-i" to generate submit files.'
+                )
                 exit(1)
+            print_status("Continuing with job submission...")
         else:
             print_warning(overwrite_warning)
 
