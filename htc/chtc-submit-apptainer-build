@@ -11,10 +11,18 @@ import os
 import pwd
 import subprocess
 from time import sleep
+from turtle import title
 
 VERSION: str = "0.1"
 PRINT_DELAY: float = 1.5
 PRINT_PREFIX: str = "%"
+
+# Use a single section width determined once at script start
+try:
+    _terminal_width = os.get_terminal_size().columns
+except OSError:
+    _terminal_width = 80
+SECTION_WIDTH: int = min(max(_terminal_width, 40), 80)
 
 
 def print_error(message: str) -> None:
@@ -31,6 +39,44 @@ def print_error_details(details: list[str]) -> None:
     for detail in details:
         print(f"   {detail}")
     print()
+
+
+def print_section_header(title: str) -> None:
+    """
+    Prints a section header for structured output, using fixed SECTION_WIDTH.
+    """
+    line_len = max(SECTION_WIDTH, len(title) + 10)
+    separator = "═" * line_len
+    print(f"\n{separator}")
+    print(title.center(line_len))
+    print(separator)
+
+
+def print_status(message: str, status: str = "✓") -> None:
+    """
+    Prints a status line with a marker.
+    """
+    print(f"{status} {message}")
+
+
+def print_warning(message: str) -> None:
+    """
+    Prints a warning message with a clear prefix.
+    """
+    print(f"⚠️  WARNING: {message}")
+
+
+def print_title_header(title: str) -> None:
+    """
+    Prints a prominent title header for the script, visually distinct from section headers.
+    Uses box-drawing characters for visual prominence.
+    """
+    line_len = max(SECTION_WIDTH, len(title) + 10)
+    title_width = len(title) + 4
+    bracket_width = (line_len - title_width) // 2
+    middle = "#" * bracket_width + f"  {title}  " + "#" * bracket_width + "\n"
+
+    print(middle)
 
 
 def validate(args: argparse.Namespace) -> argparse.Namespace:
@@ -110,7 +156,7 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     # Check that output destination `path` does not already contain `name`
     overwrite_warning: str = (
-        f"WARNING: Output destination (may) already contain {args.full_name} - if so, it will be overwritten by this job!"
+        f"Output destination (may) already contain {args.full_name} - if so, it will be overwritten by this job!"
     )
 
     if args.path[-1] == "/":
@@ -118,18 +164,17 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     if args.path[:4] in ["osdf", "peli"]:
         if args.submit or args.interactive_submit:
-            confirm: str = input(
-                f"{overwrite_warning}\n         Do you wish to proceed? (y/n)\n> "
-            )
+            print_warning(overwrite_warning)
+            confirm: str = input("Do you wish to proceed? (y/n)\n> ")
             if not confirm.lower() in ["y", "yes"]:
                 print('Aborting! Rerun without "-s"/"-i" to generate submit files.')
                 exit(1)
         else:
-            print(overwrite_warning)
+            print_warning(overwrite_warning)
 
     destination: str = f"{args.path}/{args.full_name}"
     if os.path.isfile(destination):
-        print(overwrite_warning)
+        print_warning(overwrite_warning)
 
     args.destination = destination
 
@@ -254,11 +299,12 @@ fi
     with open(executable_file, "w") as f:
         f.write(executable_contents)
 
-    sleep(PRINT_DELAY)
-    print(
-        f"""
-{PRINT_PREFIX} Created submit file "{submit_file}" and executable "{executable_file}".
-"""
+    print_section_header("Apptainer build job files generated")
+    print_status(f"Submit file: {submit_file}")
+    print_status(f"Executable file: {executable_file}")
+    print_status(
+        f"If build is successful, you will find '{args.name}.sif' and '{args.name}.log' in: {args.destination}",
+        "→",
     )
 
     return submit_file, executable_file
@@ -273,12 +319,7 @@ def generate_verbose_text(
     """
     Generates text with debugging information.
     """
-    sleep(PRINT_DELAY)
-    print(
-        f"""{PRINT_PREFIX} Printing verbose output:
-"""
-    )
-    sleep(PRINT_DELAY)
+    print_section_header("Verbose diagnostics")
 
     text_list: list[str] = [f"chtc-submit-apptainer-build v{VERSION}\n"]
 
@@ -372,29 +413,37 @@ def byte_to_str(byte_string: bytes, encoding="utf-8") -> str:
 def submit_command(
     submit_file: str, executable_file: str, options_str: str = None, timeout: int = 30
 ) -> None:
-    sleep(PRINT_DELAY)
     if options_str:
-        print(
-            f"""{PRINT_PREFIX} Executing command:
-    condor_submit {options_str} {submit_file}
-"""
-        )
+        print_status(f"Executing: condor_submit {options_str} {submit_file}")
         exec_str_list = ["condor_submit", options_str, submit_file]
     else:
-        print(
-            f"""{PRINT_PREFIX} Executing command:
-    condor_submit {submit_file}
-"""
-        )
+        print_status(f"Executing: condor_submit {submit_file}")
         exec_str_list = ["condor_submit", submit_file]
 
     # IDEALLY: Submit job using the Python bindings.
     # In practice, however, run into the "Job credentials not found" error.
-    sleep(PRINT_DELAY)
     try:
         exec_submit_command = shell_exec(exec_str_list, timeout=timeout)
     except subprocess.TimeoutExpired as s:
         raise subprocess.TimeoutExpired(s)
+    except Exception as e:
+        if "No such file or directory" in str(e):
+            print_error(
+                "condor_submit command not found - are you logged in to an Access Point?"
+            )
+            exit(1)
+        else:
+            print_error(
+                f"An unknown error occurred when attempting to execute the submit command: {e}"
+            )
+            print_error_details(
+                [
+                    "If you are not logged in to an Access Point, log in and try again.",
+                    "If you are logged in, ensure that you can submit HTCondor jobs normally.",
+                    "If the issue persists, please contact CHTC support.",
+                ]
+            )
+            exit(1)
 
     return exec_submit_command
 
@@ -402,70 +451,48 @@ def submit_command(
 def regular_submit(
     submit_file: str, executable_file: str, args: argparse.Namespace
 ) -> None:
-    sleep(PRINT_DELAY)
+    print_section_header("Submitting regular HTCondor job")
 
     exec_submit_command = submit_command(
         submit_file, executable_file, timeout=args.timeout
     )
 
-    # Give illusion of "processing"
-    sleep(PRINT_DELAY)
-
     if exec_submit_command.returncode == 0:
-        print(
-            f"""
-{PRINT_PREFIX} Submit command successful.
-  - Monitor job status:
-      condor_watch_q -f build_{args.name}.log
-  - Monitor build progress (after job has started):
-      tail -f build_{args.name}.out
-  - Once done, find "{args.name}.sif" and "{args.name}.log" in:
-      {args.path_no_file}
-"""
+        print_status("Submit command successful")
+        print_status("Monitor job status: condor_watch_q -f build_{args.name}.log", "→")
+        print_status("Monitor build progress: tail -f build_{args.name}.out", "→")
+        print_status(
+            f"Once done, find '{args.name}.sif' and '{args.name}.log' in: {args.path_no_file}"
         )
     else:
-        print(
-            f"""
-{PRINT_PREFIX} Submit command FAILED!
-"""
-        )
+        print_error("Submit command FAILED")
 
 
 def interactive_submit(
     submit_file: str, executable_file: str, args: argparse.Namespace
 ) -> None:
-    sleep(PRINT_DELAY)
+    print_section_header("Submitting interactive HTCondor job")
+    print_status("Interactive submission started")
+    print("  - To cancel, use Ctrl+C")
     print(
-        f"""{PRINT_PREFIX} Submitting interactive job.
-  - To cancel, use the keyboard shortcut Ctrl+C
-  - Once started, run the command
-      bash {executable_file} {args.full_name} {args.definition}
-  - When finished, quit the interactive job with
-      exit
-"""
+        f"  - Once started, run: bash {executable_file} {args.full_name} {args.definition}"
     )
-    sleep(PRINT_DELAY)
+    print("  - When finished, type: exit")
 
-    # Submit interactive job (if that is even possible via a Python script!!)
     exec_submit_command = submit_command(
         submit_file, executable_file, "-i", timeout=None
     )
 
     if exec_submit_command.returncode == 0:
-        print(
-            f"""
-{PRINT_PREFIX} Interactive submission successful.
-  - If container build was successful, find "{args.name}.sif" and "{args.name}.log" in:
-      {args.path_no_file}
-  - If container build was NOT successful, the job is likely on hold. 
-    Find JobID using
-      condor_q -hold
-    Then remove with
-      condor_rm JOB_ID
-"""
+        print_status("Interactive submission successful")
+        print_status(
+            f"If build was successful, find '{args.name}.sif' and '{args.name}.log' in: {args.path_no_file}"
+        )
+        print_status(
+            "If build was not successful, use condor_q -hold and condor_rm JOB_ID to manage the job"
         )
     else:
-        print(f"{PRINT_PREFIX} Interactive submit FAILED!\n")
+        print_error("Interactive submit FAILED")
 
 
 def get_args(username: str) -> argparse.Namespace:
@@ -582,6 +609,12 @@ def main(args: argparse.Namespace) -> None:
     Processes arguments, generates files, and submits Apptainer build
     """
 
+    # Always bracket script output with blank lines for terminal readability
+    print("")
+
+    # Opening title header
+    print_title_header("CHTC APPTAINER BUILD")
+
     # Check that argument values are valid, do cleanup
     original_args: dict = {k: v for k, v in args.__dict__.items()}
     args = validate(args)
@@ -620,18 +653,17 @@ def main(args: argparse.Namespace) -> None:
             )
     else:
         try:
-            sleep(PRINT_DELAY)
-            print(
-                f"""{PRINT_PREFIX} Done! Submit the Apptainer build job to HTCondor using:
-    condor_submit {submit_file}
-"""
+            print_section_header("Next step")
+            print_status(
+                f"Done! Submit the Apptainer build job to HTCondor using: condor_submit {submit_file}"
             )
         except Exception as e:
-            print(
+            print_error(
                 f"Unknown exception occurred when reporting generated file names: {e}"
             )
 
-    sleep(PRINT_DELAY)
+    # Ending newline to clearly separate from next shell prompt.
+    print("")
 
 
 if __name__ == "__main__":
