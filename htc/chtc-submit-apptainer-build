@@ -338,10 +338,16 @@ fi
     print_section_header("Apptainer build job files generated")
     print_status(f"Submit file: {submit_file}")
     print_status(f"Executable file: {executable_file}")
-    print_status(
-        f"If build is successful, you will find '{args.name}.sif' and '{args.name}.log' in: {args.destination}",
-        "→",
-    )
+    if args.path_no_file:
+        print_status(
+            f"If build is successful, you will find '{args.name}.sif' and '{args.name}.log' in: {args.path_no_file}",
+            "→",
+        )
+    else:
+        print_status(
+            f"If build is successful, you will find '{args.name}.sif' and '{args.name}.log' in: {args.destination}",
+            "→",
+        )
 
     return submit_file, executable_file
 
@@ -495,8 +501,10 @@ def regular_submit(
 
     if exec_submit_command.returncode == 0:
         print_status("Submit command successful")
-        print_status("Monitor job status: condor_watch_q -f build_{args.name}.log", "→")
-        print_status("Monitor build progress: tail -f build_{args.name}.out", "→")
+        print_status(
+            f"Monitor job status: condor_watch_q -f build_{args.name}.log", "→"
+        )
+        print_status(f"Monitor build progress: tail -f build_{args.name}.out", "→")
         print_status(
             f"Once done, find '{args.name}.sif' and '{args.name}.log' in: {args.path_no_file}"
         )
@@ -733,9 +741,12 @@ def main(args: argparse.Namespace) -> None:
     else:
         try:
             print_section_header("Next step")
-            print_status(
-                f"Done! Submit the Apptainer build job to HTCondor using: condor_submit {submit_file}"
-            )
+            print_status("Done! Apptainer job files generated.")
+            print_status("Recommended next steps:", status="→")
+            print("  1) Submit job with: condor_submit apptainer-build.sub")
+            print("  2) Track progress: condor_watch_q -f build_{args.name}.log")
+            print("  3) Tail output: tail -f build_{args.name}.out")
+            print("  (Run these in the directory where the .sub file was created.)")
         except Exception as e:
             print_error(
                 f"Unknown exception occurred when reporting generated file names: {e}"
