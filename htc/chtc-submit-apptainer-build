@@ -109,7 +109,7 @@ def print_title_header(title: str) -> None:
 
     print(f"{top.center(SECTION_WIDTH)}")
     print(middle.center(SECTION_WIDTH))
-    print(f"{bottom.center(SECTION_WIDTH)}\n")
+    print(f"{bottom.center(SECTION_WIDTH)}")
 
 
 def validate(args: argparse.Namespace) -> argparse.Namespace:
@@ -197,18 +197,19 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
 
     if args.path[:4] in ["osdf", "peli"]:
         if args.submit or args.interactive_submit:
+            print()
             print_warning(overwrite_warning)
             if not prompt_yes_no("Do you wish to proceed?", default="n"):
-                print_error(
-                    'Aborting! Rerun without "-s"/"-i" to generate submit files.'
-                )
+                print_error("Aborting!")
                 exit(1)
             print_status("Continuing with job submission...")
         else:
+            print()
             print_warning(overwrite_warning)
 
     destination: str = f"{args.path}/{args.full_name}"
     if os.path.isfile(destination):
+        print()
         print_warning(overwrite_warning)
 
     args.destination = destination
@@ -544,15 +545,15 @@ def print_usage_guide(username: str) -> None:
     print("High Throughput Computing (HTC) cluster.\n")
 
     print("Basic usage:")
-    print(f"  ./{SCRIPT_NAME} -d <definition>.def\n")
+    print(f"  ./{SCRIPT_NAME} <definition>.def\n")
 
     print("Examples:")
     print(f"  # Generate submission files only")
-    print(f"  ./{SCRIPT_NAME} -d mycontainer.def\n")
+    print(f"  ./{SCRIPT_NAME} mycontainer.def\n")
     print(f"  # Generate and submit immediately")
-    print(f"  ./{SCRIPT_NAME} -d mycontainer.def -s\n")
+    print(f"  ./{SCRIPT_NAME} mycontainer.def -s\n")
     print(f"  # Generate with custom output name")
-    print(f"  ./{SCRIPT_NAME} -d mycontainer.def -n mycustom.sif\n")
+    print(f"  ./{SCRIPT_NAME} mycontainer.def -n mycustom.sif\n")
 
     print("For detailed help:")
     print(f"  ./{SCRIPT_NAME} -h\n")
@@ -571,6 +572,8 @@ def get_args(username: str) -> argparse.Namespace:
     parser_epilog: str = f"""
         This script creates HTCondor job submission files (.sub and .sh) from an Apptainer definition file (.def).
         The generated files can then be submitted to CHTC's High Throughput Computing cluster to build container images.
+
+        Provide the definition file either as a positional argument (e.g., ./{SCRIPT_NAME} myfile.def) or with -d (e.g., ./{SCRIPT_NAME} -d myfile.def).
 
         By default, built containers are transferred to your /staging directory. Use -p to specify a different location.
 
@@ -593,23 +596,29 @@ def get_args(username: str) -> argparse.Namespace:
     )
     parser.add_argument("--version", action="version", version=VERSION)
 
-    # Required arguments
+    # Positional argument (primary, optional)
 
-    required = parser.add_argument_group("required")
-
-    required.add_argument(
-        "-d",
-        "--definition",
-        required=False,
+    parser.add_argument(
+        "definition_positional",
+        nargs="?",
         type=str,
         metavar="<name>.def",
         default=None,
-        help="Path to the Apptainer definition file (.def) used to build the container image.",
+        help="Path to the Apptainer definition file (.def) used to build the container image (positional).",
     )
 
     # Additional arguments
 
     additional = parser.add_argument_group("additional")
+
+    additional.add_argument(
+        "-d",
+        "--definition",
+        dest="definition_flag",
+        type=str,
+        metavar="<name>.def",
+        help="Path to the Apptainer definition file (.def) used to build the container image (flag).",
+    )
 
     additional.add_argument(
         "-n",
@@ -663,7 +672,15 @@ def get_args(username: str) -> argparse.Namespace:
         help="Automatically submit the generated job files to HTCondor immediately after creation.",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Normalize definition from positional and flag options.
+    if args.definition_flag is not None:
+        args.definition = args.definition_flag
+    else:
+        args.definition = args.definition_positional
+
+    return args
 
 
 def main(args: argparse.Namespace) -> None:
