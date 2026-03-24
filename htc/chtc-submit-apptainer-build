@@ -564,19 +564,17 @@ def get_args(username: str) -> argparse.Namespace:
     """
 
     # Instantiate parser
-    parser_description: str = f"""
-        Use this script to generate the files necessary to submit a job for building an Apptainer container.
+    parser_description: str = """
+        Generate HTCondor submission files for building Apptainer/Singularity containers on CHTC's HTC cluster.
+        Creates the necessary .sub and .sh files from an Apptainer definition file, with options to submit jobs immediately.
         """
     parser_epilog: str = f"""
-        Version {VERSION} -- 
-        This script can be used to create the files needed to submit an HTCondor job to build an Apptainer container 
-        on CHTC's High Throughput Computing (HTC) cluster. User provides the necessary Apptainer definition (.def) 
-        file and the script will create the necessary submit (.sub) and executable (.sh) files. Once generated, the
-        user can use the `condor_submit` command to submit a job that builds the Apptainer container image (.sif). 
-        For more information, see <link to CHTC webpage>.
-        
-        The submit file is set up to automatically transfer the container .sif image to the user's /staging directory,
-        unless otherwise specified.
+        This script creates HTCondor job submission files (.sub and .sh) from an Apptainer definition file (.def).
+        The generated files can then be submitted to CHTC's High Throughput Computing cluster to build container images.
+
+        By default, built containers are transferred to your /staging directory. Use -p to specify a different location.
+
+        After generating files, submit the job with: condor_submit apptainer-build.sub
         """
 
     parser = argparse.ArgumentParser(
@@ -591,7 +589,7 @@ def get_args(username: str) -> argparse.Namespace:
         "-v",
         "--verbose",
         action="store_true",
-        help="Print additional information useful for testing and debugging.",
+        help="Show detailed diagnostic information and debugging output.",
     )
     parser.add_argument("--version", action="version", version=VERSION)
 
@@ -606,7 +604,7 @@ def get_args(username: str) -> argparse.Namespace:
         type=str,
         metavar="<name>.def",
         default=None,
-        help="Name of Apptainer definition .def file to convert to Apptainer image .sif file.",
+        help="Path to the Apptainer definition file (.def) used to build the container image.",
     )
 
     # Additional arguments
@@ -629,7 +627,7 @@ def get_args(username: str) -> argparse.Namespace:
         type=str,
         metavar="<path>",
         default=f"file:///staging/{username}",
-        help="Defines a transfer_output_remap that transfers the <name>.sif file to the provided destination.",
+        help="Destination path where the built .sif container image will be transferred.",
     )
     additional.add_argument(
         "-f",
@@ -637,7 +635,7 @@ def get_args(username: str) -> argparse.Namespace:
         type=str,
         metavar=("FILE1", "FILE2"),
         nargs="*",
-        help="List additional files that will need to be transferred alongside the .def file.",
+        help="Additional files to transfer to the compute node alongside the definition file.",
     )
     additional.add_argument(
         "-t",
@@ -645,7 +643,7 @@ def get_args(username: str) -> argparse.Namespace:
         type=int,
         metavar=("SECONDS"),
         default=30,
-        help="How long to wait before giving up on submit command.",
+        help="Maximum time to wait for the job submission command to complete.",
     )
 
     # Mutually exclusive additional arguments
@@ -656,13 +654,13 @@ def get_args(username: str) -> argparse.Namespace:
         "-i",
         "--interactive-submit",
         action="store_true",
-        help='Specifies an "interactive" job submission. Once started, user will need to manually execute the .sh script.',
+        help="Submit an interactive job where you can manually run the build script on the allocated node.",
     )
     mutually_exclusive.add_argument(
         "-s",
         "--submit",
         action="store_true",
-        help="Submit a regular job automatically using the generated submit and executable files.",
+        help="Automatically submit the generated job files to HTCondor immediately after creation.",
     )
 
     return parser.parse_args()
