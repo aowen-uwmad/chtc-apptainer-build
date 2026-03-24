@@ -80,11 +80,11 @@ def validate(args: argparse.Namespace) -> argparse.Namespace:
         else:
             print(overwrite_warning)
 
-    destination = f"{args.path}/{args.full_name}"
+    destination: str = f"{args.path}/{args.full_name}"
     if os.path.isfile(destination):
         print(overwrite_warning)
 
-    args.destination: str = destination
+    args.destination = destination
 
     # Convenient for "ls" reference
     if args.path[:8] == "file:///":
