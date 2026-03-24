@@ -100,12 +100,14 @@ def print_title_header(title: str) -> None:
     Prints a prominent title header for the script, visually distinct from section headers.
     Uses box-drawing characters for visual prominence.
     """
-    line_len = max(SECTION_WIDTH, len(title) + 10)
-    title_width = len(title) + 4
-    bracket_width = (line_len - title_width) // 2
-    middle = "#" * bracket_width + f"  {title}  " + "#" * bracket_width + "\n"
+    line_len = len(title) + 6  # 2 for ║, 4 for spaces
+    top = "╔" + "═" * (line_len - 2) + "╗"
+    middle = "║ " + title.center(line_len - 4) + " ║"
+    bottom = "╚" + "═" * (line_len - 2) + "╝"
 
-    print(middle)
+    print(f"{top.center(SECTION_WIDTH)}")
+    print(middle.center(SECTION_WIDTH))
+    print(f"{bottom.center(SECTION_WIDTH)}\n")
 
 
 def validate(args: argparse.Namespace) -> argparse.Namespace:
