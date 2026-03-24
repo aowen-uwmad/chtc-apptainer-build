@@ -744,8 +744,8 @@ def main(args: argparse.Namespace) -> None:
             print_status("Done! Apptainer job files generated.")
             print_status("Recommended next steps:", status="→")
             print("  1) Submit job with: condor_submit apptainer-build.sub")
-            print("  2) Track progress: condor_watch_q -f build_{args.name}.log")
-            print("  3) Tail output: tail -f build_{args.name}.out")
+            print(f"  2) Track progress: condor_watch_q -f build_{args.name}.log")
+            print(f"  3) Tail output: tail -f build_{args.name}.out")
             print("  (Run these in the directory where the .sub file was created.)")
         except Exception as e:
             print_error(
