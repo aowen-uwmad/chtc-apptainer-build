@@ -10,12 +10,14 @@ import argparse
 import os
 import pwd
 import subprocess
+import sys
 from time import sleep
 from turtle import title
 
 VERSION: str = "0.1"
 PRINT_DELAY: float = 1.5
 PRINT_PREFIX: str = "%"
+SCRIPT_NAME: str = os.path.basename(sys.argv[0])
 
 # Use a single section width determined once at script start
 try:
@@ -354,7 +356,7 @@ def generate_verbose_text(
     """
     print_section_header("Verbose diagnostics")
 
-    text_list: list[str] = [f"chtc-submit-apptainer-build v{VERSION}\n"]
+    text_list: list[str] = [f"{SCRIPT_NAME} v{VERSION}\n"]
 
     text_list.append("Original Arguments:")
     for k, v in original_args.items():
@@ -528,6 +530,34 @@ def interactive_submit(
         print_error("Interactive submit FAILED")
 
 
+def print_usage_guide(username: str) -> None:
+    """
+    Prints a brief, human-friendly usage guide when the script is run without arguments.
+    """
+    print()
+    print_title_header("CHTC APPTAINER BUILD")
+
+    print_section_header("Quick Start Guide")
+    print(
+        "This script generates files to submit an Apptainer container build job to CHTC's"
+    )
+    print("High Throughput Computing (HTC) cluster.\n")
+
+    print("Basic usage:")
+    print(f"  ./{SCRIPT_NAME} -d <definition>.def\n")
+
+    print("Examples:")
+    print(f"  # Generate submission files only")
+    print(f"  ./{SCRIPT_NAME} -d mycontainer.def\n")
+    print(f"  # Generate and submit immediately")
+    print(f"  ./{SCRIPT_NAME} -d mycontainer.def -s\n")
+    print(f"  # Generate with custom output name")
+    print(f"  ./{SCRIPT_NAME} -d mycontainer.def -n mycustom.sif\n")
+
+    print("For detailed help:")
+    print(f"  ./{SCRIPT_NAME} -h\n")
+
+
 def get_args(username: str) -> argparse.Namespace:
     """
     Creates parser for parsing arguments
@@ -572,9 +602,10 @@ def get_args(username: str) -> argparse.Namespace:
     required.add_argument(
         "-d",
         "--definition",
-        required=True,
+        required=False,
         type=str,
         metavar="<name>.def",
+        default=None,
         help="Name of Apptainer definition .def file to convert to Apptainer image .sif file.",
     )
 
@@ -705,6 +736,11 @@ if __name__ == "__main__":
 
     # Parse arguments
     args = get_args(username)
+
+    # If no arguments provided, show usage guide
+    if args.definition is None:
+        print_usage_guide(username)
+        exit(0)
 
     # Execute
     try:
