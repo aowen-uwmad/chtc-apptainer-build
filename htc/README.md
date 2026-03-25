@@ -8,6 +8,12 @@ To use the `chtc-submit-apptainer-build` script, copy it to your access point wi
 wget https://github.com/aowen-uwmad/chtc-apptainer-build/raw/refs/heads/main/htc/chtc-submit-apptainer-build
 ```
 
+Then run
+
+```bash
+chmod +x chtc-submit-apptainer-build
+```
+
 Then see the help text with
 
 ```bash
