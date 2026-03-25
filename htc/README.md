@@ -14,10 +14,10 @@ Then run
 chmod +x chtc-submit-apptainer-build
 ```
 
-Then see the help text with
+Then see the quickstart guide by running the script with no arguments: 
 
 ```bash
-chtc-submit-apptainer-build --help
+./chtc-submit-apptainer-build
 ```
 
 If you encounter an error `-bash: chtc-submit-apptainer-build: command not found`, preface the command with `python`:
